@@ -1,55 +1,51 @@
-import React, { FC, useEffect, useRef, useState } from 'react';
+import React, { FC, useCallback, useEffect, useRef, useState } from 'react';
 import style from './game.module.scss';
 import Button from '@/app/components/common/button/button';
 import params from './gameEngine/parameters/gameParameters';
 import GameEngine from './gameEngine/gameEngine';
 import { GlobalGameState } from './gameEngine/types/objectState';
-import gameState from './gameEngine/store/gameState';
 
 const Game: FC = () => {
-    const ref = useRef<HTMLCanvasElement | null>(null);
-
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    // This function will be used inside GameEngine and GameAnimator to access context of current canvas
+    const contextDelegate = useCallback(() => {
+        return canvasRef.current.getContext('2d')
+    }, [])
+    // Here we will store game engine
+    const gameEngineRef = useRef<GameEngine>(new GameEngine(contextDelegate));
     const [paused, setIsPaused] = useState(false);
 
-    const onKeyDown = (event: KeyboardEvent) => {
-        GameEngine.getInstance().gameControlPressed(event);
-    };
-
     const startGame = () => {
-        GameEngine.getInstance().setGameState(GlobalGameState.LevelStarted);
-        // todo move to useEffect
-        window.addEventListener('keydown', onKeyDown);
+        gameEngineRef.current?.setGameState(GlobalGameState.LevelStarted);
     };
 
     const pauseGame = () => {
         if (paused) {
-            GameEngine.getInstance().setGameState(GlobalGameState.Resumed);
+            gameEngineRef.current?.setGameState(GlobalGameState.Resumed);
             setIsPaused(false);
         } else {
-            GameEngine.getInstance().setGameState(GlobalGameState.Paused);
+            gameEngineRef.current?.setGameState(GlobalGameState.Paused);
             setIsPaused(true);
         }
     };
 
+    // Subscribe on keydown event no matter which game state is.
+    // Just check current state inside gameControlPressed and react accordingly
+    // Or don't react if game is paused or ended
     useEffect(() => {
-        console.log('in useEffect');
-        console.log('game isRunning is now');
-        console.log(gameState.isGameRunning);
+        const onKeyDown = (event: KeyboardEvent) => {
+            // TODO check current game state inside gameControlPressed
+            //  if game is running - process event
+            //  if not - just ignore
+            gameEngineRef.current?.gameControlPressed(event);
+        };
 
-        const context = (ref.current as HTMLCanvasElement).getContext('2d');
-        if (context) {
-            const gameEngine = GameEngine.getInstance(context);
-            gameEngine.setGameState(GlobalGameState.Loaded);
-        } else {
-            console.log('no context found');
+        window.addEventListener('keydown', onKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', onKeyDown)
         }
-
-        setInterval(() => {
-            console.log('in set interval');
-            console.log('game isRunning is now');
-            console.log(gameState.isGameRunning);
-        }, 1000);
-    }, [gameState.isGameRunning]);
+    }, [])
 
     return (
         <div className={style.game}>
@@ -59,7 +55,7 @@ const Game: FC = () => {
             </div>
             <div>
                 <canvas
-                    ref={ref}
+                    ref={canvasRef}
                     width={params.WIDTH}
                     height={params.HEIGHT}
                     className={style.game__canvas}>

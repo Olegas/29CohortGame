@@ -6,7 +6,7 @@ import { GlobalGameState } from './types/objectState';
 import GameEngine from './gameEngine';
 
 class GameAnimator {
-    private context: CanvasRenderingContext2D;
+    private contextDelegate: () => CanvasRenderingContext2D;
 
     private frameCount = 0;
 
@@ -20,8 +20,13 @@ class GameAnimator {
 
     private drawBackground: () => void;
 
-    constructor(ctx: CanvasRenderingContext2D, drawBackground: () => void) {
-        this.context = ctx;
+    // getter to access context (to reduce amount of changes in present code)
+    get context() {
+        return this.contextDelegate();
+    }
+
+    constructor(contextDelegate: () => CanvasRenderingContext2D, drawBackground: () => void) {
+        this.contextDelegate = contextDelegate;
         this.drawBackground = drawBackground;
     }
 
