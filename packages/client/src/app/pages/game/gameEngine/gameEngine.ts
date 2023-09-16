@@ -4,6 +4,7 @@ import gameState from './store/gameState';
 import { GameShot } from './types/gameTypes';
 import { ShotType } from './types/commonTypes';
 import { GlobalGameState } from './types/objectState';
+import GameState from './store/gameState';
 
 // todo move it in some control module ?
 const ControlKeys = {
@@ -21,29 +22,31 @@ class GameEngine {
     // eslint-disable-next-line no-use-before-define
     private static instance?: GameEngine;
 
-    private context: CanvasRenderingContext2D;
+    private contextDelegate: () => CanvasRenderingContext2D;
 
     private bgImage = new Image();
 
     animator: GameAnimator;
 
-    constructor(ctx: CanvasRenderingContext2D) {
-        this.context = ctx;
-        this.bgImage.src = params.BACKGROUND_IMAGE;
-        this.animator = new GameAnimator(this.context, this.renderGameField);
+    // getter to access context (to reduce amount of changes in present code)
+    get context() {
+        return this.contextDelegate()
     }
 
-    public static getInstance = (ctx?: CanvasRenderingContext2D) => {
-        if (!GameEngine.instance && ctx) {
-            GameEngine.instance = new GameEngine(ctx);
-        }
+    constructor(contextDelegate: () => CanvasRenderingContext2D) {
+        this.contextDelegate = contextDelegate;
+        this.bgImage.src = params.BACKGROUND_IMAGE;
+        this.animator = new GameAnimator(
+            contextDelegate,
+            this.renderGameField,
+            () => {
+                this.setGameState(GlobalGameState.Ended);
+            }, () => {
+                this.setGameState(GlobalGameState.LevelEnded);
+            });
 
-        if (GameEngine.instance) {
-            return GameEngine.instance;
-        }
-
-        throw new Error('no context provided for gameEngine');
-    };
+        this.setGameState(GlobalGameState.Loaded)
+    }
 
     private renderGameField = () => {
         this.context.clearRect(0, 0, params.WIDTH, params.HEIGHT);
