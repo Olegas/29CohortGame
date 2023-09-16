@@ -2,12 +2,8 @@ import { DrawableGameObject } from './types/commonTypes';
 import { EnemyShip, PlayerShip, GameShot } from './types/gameTypes';
 import CollisionManager from './collisionManager';
 import gameState from './store/gameState';
-import { GlobalGameState } from './types/objectState';
-import GameEngine from './gameEngine';
 
 class GameAnimator {
-    private contextDelegate: () => CanvasRenderingContext2D;
-
     private frameCount = 0;
 
     public mainLoopIndex = 0;
@@ -18,16 +14,16 @@ class GameAnimator {
 
     private isStopped = false;
 
-    private drawBackground: () => void;
-
     // getter to access context (to reduce amount of changes in present code)
     get context() {
-        return this.contextDelegate();
+        return this._contextDelegate();
     }
 
-    constructor(contextDelegate: () => CanvasRenderingContext2D, drawBackground: () => void) {
-        this.contextDelegate = contextDelegate;
-        this.drawBackground = drawBackground;
+    constructor(
+        private _contextDelegate: () => CanvasRenderingContext2D,
+        private _drawBackground: () => void,
+        private _onPlayerDead: () => void,
+        private _onLevelEnd: () => void) {
     }
 
     private drawFrame = (object: DrawableGameObject) => {
@@ -77,7 +73,7 @@ class GameAnimator {
             return;
         }
 
-        this.drawBackground();
+        this._drawBackground();
 
         this.frameCount++;
 
@@ -106,14 +102,14 @@ class GameAnimator {
             console.log('game ends');
             this.isStopped = true;
             window.cancelAnimationFrame(this.requestId);
-            GameEngine.getInstance().setGameState(GlobalGameState.Ended);
+            this._onPlayerDead()
         }
 
         if (this.mainLoopIndex === gameState.getLevelTime()) {
             console.log('level ends');
             this.isStopped = true;
             window.cancelAnimationFrame(this.requestId);
-            GameEngine.getInstance().setGameState(GlobalGameState.LevelEnded);
+            this._onLevelEnd()
         }
 
         this.mainLoopIndex++; // do we need to replace this with time?

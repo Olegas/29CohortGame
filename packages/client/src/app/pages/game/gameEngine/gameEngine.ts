@@ -36,7 +36,15 @@ class GameEngine {
     constructor(contextDelegate: () => CanvasRenderingContext2D) {
         this.contextDelegate = contextDelegate;
         this.bgImage.src = params.BACKGROUND_IMAGE;
-        this.animator = new GameAnimator(contextDelegate, this.renderGameField);
+        this.animator = new GameAnimator(
+            contextDelegate,
+            this.renderGameField,
+            () => {
+                this.setGameState(GlobalGameState.Ended);
+            }, () => {
+                this.setGameState(GlobalGameState.LevelEnded);
+            });
+
         this.setGameState(GlobalGameState.Loaded)
     }
 
